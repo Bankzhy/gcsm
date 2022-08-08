@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+
+    <meta charset="utf-8">
+    <script src="../../static/lib/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-resource@1.5.3"></script>
+<link rel="stylesheet"
+      href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/default.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"></script>
+<!--        <script >hljs.initHighlightingOnLoad();</script>-->
+    <script src="../../static/lib/echarts.min.js" type="text/javascript" charset="utf-8"></script>
+
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <link rel="stylesheet" type="text/css" href="../../static/css/review.css">
+    <!-- 引入组件库 -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/highlightjs-line-numbers.js/2.8.0/highlightjs-line-numbers.min.js"></script>
+
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <div class="main" ref="main" id="app">
+        <div class="navbar">
+            <div class="nav-content">
+                <div style="width: 40px; margin-left: 5px">
+                    <el-button  @click="drawer = true" circle>M</el-button>
+                </div>
+                <div style="width: 20px;"></div>
+                <div class="title">Long Method Labeling</div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="body-content">
+                <div class="left">
+                    <div class="code-area">
+                        <el-table
+                          :data="codeTable"
+                        >
+                          <el-table-column
+                            prop="sid"
+                            label="SID"
+                            width="100">
+                          </el-table-column>
+                          <el-table-column
+                            prop="str"
+                            label="code">
+                          </el-table-column>
+                        </el-table>
+<!--                        <textarea id="diyCode" rows="10" cols="50"></textarea>-->
+<!--                        <pre id="diyCodeBlock" style="height: 100%"><code></code></pre>-->
+<!--                            <code style="height: 100%" class="java">-->
+<!--                            {%verbatim myblock%}-->
+<!--                                {{codeContent}}-->
+<!--                            {%endverbatim myblock%}-->
+<!--                            </code>-->
+<!--                            <code id="codelang"></code>-->
+<!--                        </pre>-->
+                    </div>
+                </div>
+                <div class="right">
+                    <div class="ques-card">
+                        <div class="ques">
+                            Is the method total line larger than 30?
+                        </div>
+                        <div class="btn-group">
+                            <el-radio-group class="el-radio__input" text-color="#0aaeb3" fill="#0aaeb3" v-model="radio3" size="small">
+                              <el-radio label="1" >Yes</el-radio>
+                              <el-radio label="2" >No</el-radio>
+                            </el-radio-group>
+                        </div>
+                    </div>
+
+                    <div class="ques-card">
+                        <div class="ques">
+                            Is the method have clear extract opportunity?
+                        </div>
+                        <div class="btn-group">
+                            <el-radio-group class="el-radio__input" text-color="#0aaeb3" fill="#0aaeb3" v-model="radio3" size="small">
+                              <el-radio label="1" >Yes</el-radio>
+                              <el-radio label="2" >No</el-radio>
+                            </el-radio-group>
+                        </div>
+                    </div>
+
+                    <div class="ques-card">
+                        <div class="ques">
+                            The start and end line of the extract method?
+                        </div>
+                        <div class="btn-group">
+                            <el-input v-model="message" type="number" placeholder="start line number"></el-input>
+                            <span>~</span>
+                            <el-input v-model="message" type="number" placeholder="end line number"></el-input>
+                        </div>
+                    </div>
+
+                    <div class="btns">
+                        <el-button style="margin-left: 10px; width: 90px" size="small" @click="backMethod" round>back</el-button>
+                        <el-button style="width: 90px; background-color: whitesmoke" size="small" @click="nextMethod" round>Next</el-button>
+                        <el-button style="width: 90px; background-color: ghostwhite" size="small" round>Negative</el-button>
+                        <el-button style="width: 90px; background-color: darkgrey" size="small" round>Positive</el-button>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</body>
+<script type="text/javascript">
+    var app = new Vue({
+        el: '#app',
+        data: {
+            message: 'meg',
+            radio3:"1",
+            projectId:"0",
+            methodList:[],
+            codeTable:[],
+            currentId:0
+        },
+        created(){
+            var pid = window.location.search.split("=")
+            var pid = pid[1]
+            console.log(pid)
+            this.getAllMethods(pid)
+            // hljs.highlightAll();
+            hljs.initHighlightingOnLoad();
+            hljs.initLineNumbersOnLoad();
+        },
+
+        methods:{
+            async getAllMethods(pid){
+                await axios({
+                    method: 'get',
+                    url: '/method_list',
+                    params: {
+                       pid: pid,
+                      }
+                }).then(
+                   response => {
+                        this.methodList = response.data
+                        // this.setCode(this.currentId)
+                       // this.parseCode(this.currentId)
+                       this.getCode(this.currentId)
+                       console.log(this.codeContent)
+                   }
+                )
+                var i;
+                // for(i =0; i < response.data.length; i++) {
+                //     var j;
+                //     var hd = response.data[i]
+                //     console.log(hd)
+                // }
+                // this.methodList = response.data
+                // this.setCode(this.methodList[0].fields.content)
+                // console.log(this.codeContent)
+            },
+            setCode(id){
+                var cc = this.methodList[id].fields.content
+                this.codeContent = cc
+                const diyCodeBlock = document.getElementById("diyCodeBlock");
+                var code = diyCodeBlock.firstElementChild;
+                code.className = "java";
+                console.log(this.codeContent)
+                console.log(code.innerHTML)
+                code.innerHTML = this.codeContent
+                console.log(code.innerHTML)
+                console.log(this.codeContent)
+                hljs.highlightElement(diyCodeBlock);
+                // hljs.initLineNumbersOnLoad();
+            },
+            parseCode(id) {
+                this.codeTable = []
+                var codeContent = this.methodList[id].fields.content
+                var codeContentList = codeContent.split("\n")
+
+                console.log(codeContent)
+                console.log(codeContentList)
+                var i = 0
+                for (i = 0; i < codeContentList.length; i++) {
+                    var ct = {
+                        ln:i,
+                        code:codeContentList[i]
+                    }
+                    this.codeTable.push(ct)
+                }
+
+            },
+            async getCode(id) {
+                var url = '/code_table';
+                var data = {
+                    path: this.methodList[id].fields.path,
+                    class_name: this.methodList[id].fields.class_name,
+                    method_name:this.methodList[id].fields.method_name,
+                    pc:this.methodList[id].fields.param_count
+                }
+
+                const response = await axios.post(url, data);
+                // console.log(response)
+                console.log(this.methodList[id].fields.content)
+                this.codeTable = []
+                this.codeTable = response.data
+            },
+
+            nextMethod(){
+                this.currentId += 1
+                this.getCode(this.currentId)
+            },
+            backMethod(){
+                if (this.currentId > 0) {
+                    this.currentId -= 1
+                    this.parseCode(this.currentId)
+                }
+            },
+            postPositive(){
+
+            },
+            postNegative(){
+
+            },
+
+            htmlEncode(str) {
+                var s = "";
+                if (str.length == 0) return "";
+                s = str.replace(/&/g, "&amp;");
+                s = s.replace(/</g, "&lt;");
+                s = s.replace(/>/g, "&gt;");
+                s = s.replace(/ /g, "&nbsp;");
+                s = s.replace(/\'/g, "&#39;");
+                s = s.replace(/\"/g, "&quot;");
+                // s = s.replace(/\n/g, "<br/>");
+                return s;
+            }
+        }
+    })
+
+</script>
+</html>
