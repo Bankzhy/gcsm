@@ -10,4 +10,9 @@ urlpatterns = [
     path('review', views.review, name='review'),
     path('method_list', views.method_list, name='method_list'),
     path('code_table', views.code_table, name='code_table'),
+    path('post_pos', views.post_pos, name='post_pos'),
+    path('post_neg', views.post_neg, name='post_neg'),
+    path('ques_list', views.ques_list, name='ques_list'),
+    path('post_ques', views.post_ques, name='post_ques'),
+    path('export_csv', views.export_csv, name='export_csv'),
 ]

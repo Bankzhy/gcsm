@@ -525,10 +525,10 @@ class SRMethod(SRCore):
                         child_block_data = self.to_block_string(statement_list=cb.child_statement_list,
                                                                 space=space)
                         block_data.extend(child_block_data)
-                    cbe_str = ""
+                    cb_str = ""
                     for x in range(0, space):
-                        cbe_str += "    "
-                    cbe_str += "}"
+                        cb_str += "    "
+                    cb_str += "}"
                     cbe_td = {
                         "str": cb_str,
                         "sid": statement.sid

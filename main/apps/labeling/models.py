@@ -30,6 +30,13 @@ class MethodWaitMaster(models.Model):
 
 class NegMethodMaster(models.Model):
     method_id = models.PositiveIntegerField(primary_key=True)
+    method_name = models.CharField(max_length=100, blank=False, null=False)
+    class_name = models.CharField(max_length=100, blank=False, null=False)
+    param_count = models.PositiveIntegerField(default=0, blank=False, null=False)
+    return_type = models.CharField(max_length=100, blank=False, null=False)
+    project_id = models.PositiveIntegerField(default=0, blank=False, null=False)
+    path = models.CharField(max_length=255, blank=False, null=False)
+    content = models.TextField(blank=False, null=False, default="")
     review_time = models.DateTimeField(default=timezone.now, blank=False, null=False)
 
     class Meta:
@@ -48,6 +55,13 @@ class QuesMaster(models.Model):
 
 class PosMethodMaster(models.Model):
     method_id = models.PositiveIntegerField(primary_key=True)
+    method_name = models.CharField(max_length=100, blank=False, null=False)
+    class_name = models.CharField(max_length=100, blank=False, null=False)
+    param_count = models.PositiveIntegerField(default=0, blank=False, null=False)
+    return_type = models.CharField(max_length=100, blank=False, null=False)
+    project_id = models.PositiveIntegerField(default=0, blank=False, null=False)
+    path = models.CharField(max_length=255, blank=False, null=False)
+    content = models.TextField(blank=False, null=False, default="")
     review_time = models.DateTimeField(default=timezone.now, blank=False, null=False)
     level = models.PositiveIntegerField(default=0, blank=False, null=False)
     ex_pos = models.CharField(max_length=100,default="", blank=False, null=False)
@@ -64,3 +78,4 @@ class MethodQues(models.Model):
 
     class Meta:
         db_table = "method_ques"
+        unique_together = ('ques_id', 'method_id')

@@ -79,7 +79,7 @@
                     <div class="btn-group">
 
                         <el-button style="margin-left: 10px; width: 90px" size="mini" @click="review(pj.pk)" round>Review</el-button>
-                        <el-button style="width: 90px; background-color: lightgray" size="mini" round>Edit</el-button>
+                        <el-button style="width: 90px; background-color: lightgray" size="mini" @click="openExportDialog(pj.pk)" round>Export</el-button>
                         <el-button style="width: 90px; background-color: darkgrey" size="mini" round>Delete</el-button>
                     </div>
 
@@ -101,6 +101,20 @@
 
                     </el-dialog>
 
+                    <el-dialog title="CSV Export" :visible.sync="exportCSVFormVisible" append-to-body=true>
+                      <el-form :model="form">
+                        <el-form-item label="Save Path: " :label-width="formLabelWidth">
+                          <el-input v-model="exportForm.save_path" autocomplete="off"></el-input>
+                        </el-form-item>
+                      </el-form>
+                      <div slot="footer" class="dialog-footer">
+                        <el-button style="width: 90px; background-color: whitesmoke" size="mini" @click="exportCSVFormVisible = false">Cancle</el-button>
+                        <el-button style="width: 90px; background-color: darkgrey" size="mini" @click="exportCSV">Confirm</el-button>
+                      </div>
+
+                    </el-dialog>
+
+
 
             </div>
 
@@ -114,12 +128,17 @@
         data: {
             message: 'meg',
             dialogFormVisible:false,
+            exportCSVFormVisible:false,
             formLabelWidth: '120px',
             pList:[],
             form: {
               name: '',
               path: ''
             },
+            exportForm:{
+                save_path:"",
+                project_id:""
+            }
         },
         created(){
             this.projectList()
@@ -136,6 +155,22 @@
                 alert("error")
             }
           },
+          openExportDialog(pid){
+            this.exportCSVFormVisible = true
+            this.exportForm.project_id = pid
+          },
+          async exportCSV(){
+            var url = '/export_csv';
+            // POST
+            const response = await axios.post(url, this.exportForm);
+            console.log(response)
+            if (response.status == 200) {
+                this.exportCSVFormVisible = false
+            } else {
+                alert("error")
+            }
+          },
+
           async projectList() {
               var url = '/project_list';
               const response = await axios.get(url, this.form);

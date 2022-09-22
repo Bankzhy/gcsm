@@ -79,6 +79,7 @@
 .left {
     height: 100%;
     width: 50%;
+    overflow: scroll;
     /*background-color: #0aaeb3;*/
 }
 .right {
@@ -91,13 +92,13 @@
     align-content: center;
 }
 .code-area {
-    height: 85%;
+    height: 100%;
     padding: 10px;
+    overflow: scroll;
 }
 
 
 .ques-card{
-    height: 150px;
     width: 90%;
     background-color: white;
     display: flex;
@@ -106,18 +107,32 @@
 }
 
 .ques{
-    height: 50%;
+
     font-weight: bolder;
     font-size: 18px;
     padding: 20px;
     /*background-color: #0aaeb3;*/
     color: dimgrey;
+    display: flex;
+    flex-direction: column;
+}
+.detail {
+    font-weight: bolder;
+    font-size: 15px;
+    padding: 10px 20px;
+
+    /*background-color: #0aaeb3;*/
+    color: grey;
+    /*background-color: rebeccapurple;*/
+    white-space: pre-line;
+    word-break: break-word;
 }
 .btn-group{
     display: flex;
     flex-direction: row-reverse;
     padding-right: 20px;
     align-items: center;
+    padding: 10px;
 }
     /* 选中后的字体颜色 */
 .el-radio__input.is-checked + .el-radio__label {
