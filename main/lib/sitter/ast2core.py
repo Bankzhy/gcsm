@@ -66,7 +66,7 @@ class ASTParse:
 
     def setup(self):
         self.so_gen_path = './build/java-languages.so'
-        self.java_lib_path = '/Users/zhang.hanyu/Documents/workspace/research/op/tree-sitter-java'
+        self.java_lib_path = '/root/gcsm/tree-sitter-java'
         Language.build_library(
             # Store the library in the `build` directory
             self.so_gen_path,
