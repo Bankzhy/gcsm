@@ -26,6 +26,7 @@ class ASTParse:
         self.METHOD_DECLARATION = "method_declaration"
         self.BLOCK = "block"
         self.FOR_STATEMENT = "for_statement"
+        self.ENHANCED_FOR_STATEMENT = "enhanced_for_statement"
         self.MODIFIERS = "modifiers"
         self.IDENTIFIER = "identifier"
         self.SUPERCLASS = "superclass"
@@ -310,7 +311,7 @@ class ASTParse:
             # print(node.type)
             # print(node.text.decode())
             if node.type != self.BLOCK_START and node.type != self.BLOCK_END:
-                if node.type == self.FOR_STATEMENT:
+                if node.type == self.FOR_STATEMENT or node.type == self.ENHANCED_FOR_STATEMENT:
                     statement_list.append(self.parse_for_statement(node))
                 elif node.type == self.IF_STATEMENT:
                     statement_list.append(self.parse_if_statement(node))
