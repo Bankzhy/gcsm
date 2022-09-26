@@ -78,13 +78,13 @@
 
 .left {
     height: 100%;
-    width: 34%;
+    width: 50%;
     overflow: scroll;
     /*background-color: #0aaeb3;*/
 }
 .right {
     height: 100%;
-    width: 34%;
+    width: 50%;
     /*background-color: rebeccapurple;*/
     display: flex;
     flex-direction: column;

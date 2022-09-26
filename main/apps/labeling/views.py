@@ -187,6 +187,10 @@ def post_neg(request):
         content=content
     )
     new_neg.save()
+
+    method_w = MethodWaitMaster.objects.get(method_id=method_id)
+    method_w.reviewed = True
+    method_w.save()
     return JsonResponse(data, safe=False)
 
 @csrf_exempt
