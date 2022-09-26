@@ -78,19 +78,27 @@
 
 .left {
     height: 100%;
-    width: 50%;
+    width: 34%;
     overflow: scroll;
     /*background-color: #0aaeb3;*/
 }
 .right {
     height: 100%;
-    width: 50%;
+    width: 34%;
     /*background-color: rebeccapurple;*/
     display: flex;
     flex-direction: column;
     align-items: center;
     align-content: center;
 }
+.rright {
+    height: 100%;
+    width: 32%;
+    overflow: scroll;
+    overflow-x: scroll;
+    /*background-color: rebeccapurple;*/
+}
+
 .code-area {
     height: 100%;
     padding: 10px;

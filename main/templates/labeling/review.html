@@ -96,7 +96,16 @@
                     </div>
 
                 </div>
-
+                <div class="rright">
+                    <pre id="diyCodeBlock" style="height: 100%; width: 100%"><code></code></pre>
+                        <code style="height: 100%; width: 100%; overflow-x: scroll" class="java">
+                        {%verbatim myblock%}
+                            {{codeContent}}
+                        {%endverbatim myblock%}
+                        </code>
+                        <code id="codelang"></code>
+                    </pre>
+                </div>
             </div>
 
         </div>
@@ -111,6 +120,7 @@
             projectId:"0",
             methodList:[],
             codeTable:[],
+            codeContent:"",
             qList:[],
             ex_pos:"",
             currentId:0
@@ -159,11 +169,8 @@
                 const diyCodeBlock = document.getElementById("diyCodeBlock");
                 var code = diyCodeBlock.firstElementChild;
                 code.className = "java";
-                console.log(this.codeContent)
-                console.log(code.innerHTML)
                 code.innerHTML = this.codeContent
-                console.log(code.innerHTML)
-                console.log(this.codeContent)
+                hljs.initHighlightingOnLoad();
                 hljs.highlightElement(diyCodeBlock);
                 // hljs.initLineNumbersOnLoad();
             },
@@ -173,6 +180,7 @@
                 var codeContentList = codeContent.split("\n")
 
                 console.log(codeContent)
+                this.setCode(this.currentId)
                 console.log(codeContentList)
                 var i = 0
                 for (i = 0; i < codeContentList.length; i++) {
@@ -201,6 +209,7 @@
                 console.log(this.methodList[id].fields.content)
                 this.codeTable = []
                 this.codeTable = response.data
+                this.setCode(this.currentId)
             },
 
             nextMethod(){
