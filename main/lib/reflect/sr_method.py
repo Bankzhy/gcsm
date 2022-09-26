@@ -119,6 +119,15 @@ class SRMethod(SRCore):
         #                 result.append(st.word_list[st.word_list.index("=")-1])
 
         return result
+
+    def get_all_word(self):
+        all_statement = self.__get_all_statement(self.statement_list, exclude_special=False)
+        result = []
+        for st in all_statement:
+            # print(st.word_list)
+            result.extend(st.get_all_word())
+        return result
+
     def get_method_LOC(self):
         return len(self.__get_all_statement(self.statement_list, exclude_special=False))
 
@@ -379,8 +388,9 @@ class SRMethod(SRCore):
                 cid += 1
                 cid = self.__refresh_sid(cid, statement.try_statement_list)
                 for cb in statement.catch_block_list:
-                    cid += self.__refresh_sid(cid, cb.child_statement_list)
-                cid = self.__refresh_sid(cid, statement.final_block_statement_list)
+                    cid = self.__refresh_sid(cid, cb.child_statement_list)
+                if len(statement.final_block_statement_list) > 0:
+                    cid = self.__refresh_sid(cid, statement.final_block_statement_list)
             else:
                 statement.sid = cid
                 cid += 1
@@ -508,7 +518,6 @@ class SRMethod(SRCore):
                 }
                 block_data.append(es_td)
 
-
                 for cb in statement.catch_block_list:
                     cb_str = ""
                     for x in range(0, space):
@@ -542,7 +551,7 @@ class SRMethod(SRCore):
                     fn_str += "finally {"
                     fn_td = {
                         "str": fn_str,
-                        "sid": ""
+                        "sid": statement.sid
                     }
                     block_data.append(fn_td)
 
@@ -555,7 +564,7 @@ class SRMethod(SRCore):
                     efn_str += "}"
                     efn_td = {
                         "str": efn_str,
-                        "sid": ""
+                        "sid": statement.sid
                     }
                     block_data.append(efn_td)
 
