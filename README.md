@@ -30,11 +30,11 @@ mysql
 python manage.py runserver
 ```
 - In the Home Page, you can Add your project through 'Add Project' 
-![image](https://images.unsplash.com/photo-1575936123452-b67c3203c357?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8aW1hZ2V8ZW58MHx8MHx8fDA%3D&w=1000&q=80)
+![image](https://github.com/Bankzhy/gcsm/blob/main/main/static/img.png)
 - Refresh the Home Page, You can see your project
 - Click 'Review' button to start the review process
 - In the Review Page, you can see the relrated metrics at left screen
-![image](https://images.unsplash.com/photo-1575936123452-b67c3203c357?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8aW1hZ2V8ZW58MHx8MHx8fDA%3D&w=1000&q=80)
+![image](https://github.com/Bankzhy/gcsm/blob/main/main/static/img_1.png)
 - CLick 'Copy' button, you can copy all source code of current class
 - The Guidline are listed at right screen 
 - Click the 'Positive' or 'Negtive' button to submit your lableing results 
