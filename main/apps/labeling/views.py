@@ -1,10 +1,13 @@
 import csv
+import datetime
 import json
 from pathlib import Path
 
 from django.core import serializers
+from django.db.models import Q
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
 from django.shortcuts import render
+from django.utils import timezone
 
 # Create your views here.
 from django.views.decorators.csrf import csrf_exempt
@@ -18,6 +21,14 @@ from apps.labeling.models import QuesMaster
 
 from apps.labeling.models import MethodQues
 
+from lib.reflect.metrics import ClassLevelMetrics
+
+from apps.labeling.models import LCProjectMaster
+
+from apps.labeling.models import LCPosClass, LCNegClass
+
+from apps.labeling.models import LCAllClass
+
 
 def index(request):
     user = request.user if request.user.is_authenticated else None
@@ -26,6 +37,38 @@ def index(request):
         'user': user
     }
     return render(request, 'labeling/index.html', context)
+
+def lc_index(request):
+    user = request.user if request.user.is_authenticated else None
+    context = {
+        'active_menu': 'homepage',
+        'user': user
+    }
+    return render(request, 'labeling/lc_index.html', context)
+
+@csrf_exempt
+def create_lc_project(request):
+    data = json.loads(request.body)
+    print(data)
+    project_path = Path(data["path"])
+    class_count = 0
+    ast = ASTParse(project_path, "java")
+    ast.setup()
+    sr_project = ast.do_parse()
+    result_list = []
+    for program in sr_project.program_list:
+        for cls in program.class_list:
+            class_count += 1
+
+    method_count = 0
+    new_project = LCProjectMaster(
+        project_name=data['name'],
+        class_count=class_count,
+        path=project_path
+    )
+    new_project.save()
+    return JsonResponse(data, safe=False)
+
 
 @csrf_exempt
 def create_project(request):
@@ -76,6 +119,14 @@ def create_project(request):
         print(e)
         return HttpResponseBadRequest()
 
+
+@csrf_exempt
+def lc_project_list(request):
+    project_list = LCProjectMaster.objects.all()
+    re = serializers.serialize('json', project_list)
+
+    return HttpResponse(re, content_type="text/json-comment-filtered")
+
 @csrf_exempt
 def project_list(request):
     project_list = ProjectMaster.objects.all()
@@ -102,6 +153,154 @@ def method_list(request):
 
     print(pid)
     return HttpResponse(re, content_type="text/json-comment-filtered")
+
+
+def class_list(request):
+    pid = request.GET['pid']
+    if pid == '2':
+        cls_list = LCAllClass.objects.filter(label='wait', is_eval=True)
+    elif pid == '3':
+        cls_list = LCAllClass.objects.filter(extract_methods='', is_eval=True, label='pos')
+    else:
+        cls_list = LCAllClass.objects.filter(label='wait').order_by('?')[:100]
+    result_list = []
+    print(cls_list)
+    for dcls in cls_list:
+        ast = ASTParse('', "java")
+        ast.setup()
+        sr_project = ast.do_parse_one_file(dcls.path)
+        for program in sr_project.program_list:
+            for cls in program.class_list:
+                if "Test" in cls.class_name or "test" in cls.class_name:
+                    continue
+
+                if len(cls.method_list) <= 0:
+                    continue
+
+                re_field_l = []
+                re_method_l = []
+                print(cls.class_name)
+                for f in cls.field_list:
+                    new_re_field = {
+                        "id": f.id,
+                        "str": f.to_string()
+                    }
+                    re_field_l.append(new_re_field)
+
+                for m in cls.method_list:
+                    metrics = ClassLevelMetrics(sr_class=cls)
+                    loc = metrics.get_method_loc(m)
+                    cc = metrics.get_method_cc(m)
+                    pc = metrics.get_method_pc(m)
+                    new_re_method = {
+                        "id": m.id,
+                        "method_name": m.method_name,
+                        "loc": loc,
+                        "cc": cc,
+                        "pc": pc
+
+                    }
+                    re_method_l.append(new_re_method)
+                method_field_d, field_method_d = parse_class(cls)
+                new_re = {
+                    "re_field_l": re_field_l,
+                    "re_method_l": re_method_l,
+                    "method_field_d": method_field_d,
+                    "field_method_d": field_method_d,
+                    "class_name": cls.class_name,
+                    "path": str(program.program_name),
+                    "class_content": cls.to_string(),
+                    "class_id": dcls.class_id,
+                    "cloc": dcls.loc,
+                    "cwmc": dcls.wmc,
+                    "clcom": dcls.lcom
+
+                }
+                result_list.append(new_re)
+    return JsonResponse(result_list, safe=False)
+
+@csrf_exempt
+def class_list_t(request):
+    pid = request.GET['pid']
+    pj = LCProjectMaster.objects.get(project_id=pid)
+    project_path = Path(pj.path)
+    pos_l = LCPosClass.objects.values_list("class_name", flat=True).filter(project_id=pid)
+    neg_l = LCNegClass.objects.values_list("class_name", flat=True).filter(project_id=pid)
+    pos_l = list(pos_l)
+    neg_l = list(neg_l)
+    ast = ASTParse(project_path, "java")
+    ast.setup()
+    sr_project = ast.do_parse()
+    result_list = []
+    for program in sr_project.program_list:
+        for cls in program.class_list:
+            if cls.class_name in pos_l or cls.class_name in neg_l:
+                continue
+
+            if "Test" in cls.class_name or "test" in cls.class_name:
+                continue
+
+            if len(cls.method_list) <= 0:
+                continue
+
+            re_field_l = []
+            re_method_l = []
+            for f in cls.field_list:
+                new_re_field = {
+                    "id": f.id,
+                    "str": f.to_string()
+                }
+                re_field_l.append(new_re_field)
+
+            for m in cls.method_list:
+                metrics = ClassLevelMetrics(sr_class=cls)
+                loc = metrics.get_method_loc(m)
+                cc = metrics.get_method_cc(m)
+                pc = metrics.get_method_pc(m)
+                new_re_method = {
+                    "id": m.id,
+                    "method_name": m.method_name,
+                    "loc": loc,
+                    "cc": cc,
+                    "pc": pc
+
+                }
+                re_method_l.append(new_re_method)
+            method_field_d, field_method_d = parse_class(cls)
+            new_re = {
+                "re_field_l": re_field_l,
+                "re_method_l": re_method_l,
+                "method_field_d": method_field_d,
+                "field_method_d": field_method_d,
+                "class_name": cls.class_name,
+                "path": str(program.program_name)
+            }
+            result_list.append(new_re)
+
+    return JsonResponse(result_list, safe=False)
+
+def parse_class(cls):
+    f_n_l = [o.field_name for o in cls.field_list]
+    method_field_d = {}
+    for m in cls.method_list:
+        method_fields = []
+        for st in m.statement_list:
+            for word in st.word_list:
+                if word in f_n_l:
+                    f_index = f_n_l.index(word)
+                    f_id = cls.field_list[f_index].id
+                    method_fields.append(f_id)
+        method_fields = list(set(method_fields))
+        method_field_d[m.id] = method_fields
+
+    field_method_d = {}
+    for mf in method_field_d:
+        for f in method_field_d[mf]:
+            if f in field_method_d.keys():
+                field_method_d[f].append(mf)
+            else:
+                field_method_d[f] = [mf]
+    return method_field_d, field_method_d
 
 
 @csrf_exempt
@@ -131,6 +330,54 @@ def code_table(request):
     except Exception as e:
         print(e)
         return HttpResponseBadRequest()
+
+@csrf_exempt
+def post_pos_class(request):
+    data = json.loads(request.body)
+    lc_cls = LCAllClass.objects.get(class_id=data["class_id"])
+    lc_cls.label = "pos"
+    lc_cls.extract_methods = data['extra_methods']
+    lc_cls.add_time = str(timezone.now())
+    lc_cls.save()
+    # new_pos = LCPosClass(
+    #     class_name=data["class_name"],
+    #     extra_method=data['extra_method'],
+    #     extra_field=data['extra_field'],
+    #     path=data["path"],
+    #     project_id=data["project_id"]
+    # )
+    # new_pos.save()
+    return JsonResponse(data, safe=False)
+
+@csrf_exempt
+def post_neg_class(request):
+    data = json.loads(request.body)
+    lc_cls = LCAllClass.objects.get(class_id=data["class_id"])
+    lc_cls.label = "neg"
+    lc_cls.add_time = str(timezone.now())
+    lc_cls.save()
+    # new_neg = LCNegClass(
+    #     class_name=data["class_name"],
+    #     path=data["path"],
+    #     project_id=data["project_id"]
+    # )
+    # new_neg.save()
+    return JsonResponse(data, safe=False)
+
+@csrf_exempt
+def post_del_class(request):
+    data = json.loads(request.body)
+    lc_cls = LCAllClass.objects.get(class_id=data["class_id"])
+    lc_cls.label = "del"
+    lc_cls.add_time = str(timezone.now())
+    lc_cls.save()
+    # new_neg = LCNegClass(
+    #     class_name=data["class_name"],
+    #     path=data["path"],
+    #     project_id=data["project_id"]
+    # )
+    # new_neg.save()
+    return JsonResponse(data, safe=False)
 
 @csrf_exempt
 def post_pos(request):
@@ -239,3 +486,12 @@ def review(request):
         'user': user
     }
     return render(request, 'labeling/review.html', context)
+
+
+def lc_review(request):
+    user = request.user if request.user.is_authenticated else None
+    context = {
+        'active_menu': 'lc_review',
+        'user': user
+    }
+    return render(request, 'labeling/lc_review.html', context)

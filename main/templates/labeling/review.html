@@ -194,6 +194,8 @@
 
             },
             async getCode(id) {
+                console.log(id)
+                console.log(this.methodList)
                 if (this.methodList[id].fields.reviewed == true) {
                     return;
                 }
@@ -206,8 +208,8 @@
                 }
 
                 const response = await axios.post(url, data);
-                // console.log(response)
-                console.log(this.methodList[id].fields.content)
+                console.log(response)
+                // console.log(this.methodList[id].fields.content)
                 this.codeTable = []
                 this.codeTable = response.data
                 this.setCode(this.currentId)

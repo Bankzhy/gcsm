@@ -4,13 +4,13 @@ import re
 import uuid
 
 from lib.reflect.sr_class import SRClass
+from lib.reflect.sr_core import SRCore
 from lib.reflect.sr_field import SRField
 from lib.reflect.sr_method import SRMethod, SRParam, SRConstructor
 from lib.reflect.sr_program import SRProgram
 from lib.reflect.sr_project import SRProject
 from lib.reflect.sr_statement import SRStatement, SRFORStatement, SRIFStatement, SRWhileStatement, SRTRYStatement, \
-    CatchBlock
-
+    CatchBlock, SRSwitchStatement, SRSwitchCase
 
 
 class ASTParse:
@@ -29,6 +29,7 @@ class ASTParse:
         self.ENHANCED_FOR_STATEMENT = "enhanced_for_statement"
         self.MODIFIERS = "modifiers"
         self.IDENTIFIER = "identifier"
+        self.TYPE_IDENTIFIER = "type_identifier"
         self.SUPERCLASS = "superclass"
         self.VARIABLE_DECLARATOR = "variable_declarator"
         self.FORMAL_PARAMETERS = "formal_parameters"
@@ -51,6 +52,12 @@ class ASTParse:
         self.CATCH_FORMAL_PARAMETER = "catch_formal_parameter"
         self.LINE_COMMENT = "line_comment"
         self.THROWS = "throws"
+        self.SWITCH_EXPRESSION = "switch_expression"
+        self.PARENTHESIZED_EXPRESSION = "parenthesized_expression"
+        self.SWITCH_BLOCK = "switch_block"
+        self.SWITCH_BLOCK_STATEMENT_GROUP = "switch_block_statement_group"
+        self.SWITCH_LABEL = "switch_label"
+        self.LABELED_STATEMENT = "labeled_statement"
 
         self.language = language
         self.JAVA_LANGUAGE = None
@@ -66,7 +73,7 @@ class ASTParse:
 
     def setup(self):
         self.so_gen_path = './build/java-languages.so'
-        self.java_lib_path = '/root/gcsm/tree-sitter-java'
+        self.java_lib_path = 'F:\\research\\tree-sitter-java-master'
         Language.build_library(
             # Store the library in the `build` directory
             self.so_gen_path,
@@ -110,6 +117,8 @@ class ASTParse:
         new_sr_field = SRField(
             id=self.get_uuid()
         )
+        new_sr_field.start_line = (root_node.start_point[0] + 1)
+        new_sr_field.end_line = (root_node.end_point[0] + 1)
         word_list = []
 
         for node in root_node.children:
@@ -146,10 +155,42 @@ class ASTParse:
                 param_list.append(new_sr_param)
         return param_list
 
+    def parse_enhanced_for_statement(self, root_node):
+        new_sr_for_statement = SRFORStatement(
+            id=self.get_uuid()
+        )
+        new_sr_for_statement.start_line = (root_node.start_point[0] + 1)
+        new_sr_for_statement.end_line = (root_node.end_point[0] + 1)
+        new_sr_for_statement.end_condition = []
+        word_list = self.statement_node_to_word_list(root_node)
+        for node in root_node.children:
+            # print("======================")
+            # print(node.type)
+            # print(node.text.decode())
+
+            if node.type == self.TYPE_IDENTIFIER or node.type == self.IDENTIFIER or node.type == ":":
+                new_sr_for_statement.end_condition.append(node.text.decode())
+            elif node.type == self.BLOCK:
+                child_statement_list = self.parse_block(node)
+
+                new_sr_for_statement.child_statement_list = child_statement_list
+            else:
+                children = [node]
+                fake_node = FakeNode(
+                    children=children
+                )
+                child_statement_list = self.parse_block(fake_node)
+                new_sr_for_statement.child_statement_list = child_statement_list
+
+        new_sr_for_statement.word_list = word_list
+        return new_sr_for_statement
+
     def parse_for_statement(self, root_node):
         new_sr_for_statement = SRFORStatement(
             id=self.get_uuid()
         )
+        new_sr_for_statement.start_line = (root_node.start_point[0] + 1)
+        new_sr_for_statement.end_line = (root_node.end_point[0] + 1)
         word_list = self.statement_node_to_word_list(root_node)
         for node in root_node.children:
             # print("======================")
@@ -180,7 +221,6 @@ class ASTParse:
 
         new_sr_for_statement.word_list = word_list
         return new_sr_for_statement
-
     def parse_catch_block(self, root_node):
         new_catch_block = CatchBlock()
         for node in root_node.children:
@@ -205,6 +245,8 @@ class ASTParse:
         new_sr_try_statement = SRTRYStatement(
             id=self.get_uuid(),
         )
+        new_sr_try_statement.start_line = (root_node.start_point[0] + 1)
+        new_sr_try_statement.end_line = (root_node.end_point[0] + 1)
         word_list = []
         new_catch_block_list = []
         for node in root_node.children:
@@ -229,15 +271,20 @@ class ASTParse:
         new_sr_if_statement = SRIFStatement(
             id=self.get_uuid()
         )
+        new_sr_if_statement.start_line = (root_node.start_point[0] + 1)
+        new_sr_if_statement.end_line = (root_node.end_point[0] + 1)
+        word_list = []
+        word_list = self.statement_node_to_word_list(root_node)
+        new_sr_if_statement.word_list = word_list
         for index, node in enumerate(root_node.children):
             # print("======================")
             # print(node.type)
             # print(node.text.decode())
-            new_sr_if_statement.word_list.append(node.text.decode())
+            # new_sr_if_statement.word_list.append(node.text.decode())
             if node.type == self.PARENTHESIZED_EXPRESSION:
                 new_sr_if_statement.condition = self.statement_node_to_word_list(node)
-                new_sr_if_statement.word_list.append("if")
-                new_sr_if_statement.word_list.extend(new_sr_if_statement.condition)
+                # new_sr_if_statement.word_list.append("if")
+                # new_sr_if_statement.word_list.extend(new_sr_if_statement.condition)
             elif node.type == "else":
                 else_index = index
         if else_index != -1:
@@ -277,10 +324,58 @@ class ASTParse:
                 new_sr_if_statement.pos_statement_list = [new_sr_statement]
         return new_sr_if_statement
 
+
+    def parse_switch_block_group(self, root_node):
+        new_sr_switch_case = SRSwitchCase(
+            id=self.get_uuid()
+        )
+
+        new_sr_switch_case.word_list
+        for node in root_node.children:
+            # print("======================")
+            # print(node.type)
+            # print(node.text.decode())
+            if node.type == self.SWITCH_LABEL:
+                new_sr_switch_case.condition = self.statement_node_to_word_list(node)
+        new_sr_switch_case.statement_list = []
+        new_sr_switch_case.statement_list = self.parse_block(root_node)
+        return new_sr_switch_case
+
+
+    def parse_switch_block(self, root_node):
+        new_switch_case_list = []
+        for node in root_node.children:
+            # print("======================")
+            # print(node.type)
+            # print(node.text.decode())
+            if node.type == self.SWITCH_BLOCK_STATEMENT_GROUP:
+               new_switch_case_list.append(self.parse_switch_block_group(node))
+        return new_switch_case_list
+
+    def parse_switch_statement(self, root_node):
+        new_sr_switch_statement = SRSwitchStatement(
+            id=self.get_uuid()
+        )
+        new_sr_switch_statement.start_line = (root_node.start_point[0] + 1)
+        new_sr_switch_statement.end_line = (root_node.end_point[0] + 1)
+        word_list = self.statement_node_to_word_list(root_node)
+        for node in root_node.children:
+            # print("======================")
+            # print(node.type)
+            # print(node.text.decode())
+            if node.type == self.PARENTHESIZED_EXPRESSION:
+                new_sr_switch_statement.condition = self.statement_node_to_word_list(node)
+            elif node.type == self.SWITCH_BLOCK:
+                new_sr_switch_statement.switch_case_list = self.parse_switch_block(node)
+        return new_sr_switch_statement
+
+
     def parse_while_statement(self, root_node):
         new_sr_while_statement = SRWhileStatement(
             id=self.get_uuid()
         )
+        new_sr_while_statement.start_line = (root_node.start_point[0] + 1)
+        new_sr_while_statement.end_line = (root_node.end_point[0] + 1)
         word_list = self.statement_node_to_word_list(root_node)
         for node in root_node.children:
             # print("======================")
@@ -304,6 +399,22 @@ class ASTParse:
         new_sr_while_statement.word_list = word_list
         return new_sr_while_statement
 
+    def parse_labeled_statement(self, root_node):
+        for node in root_node.children:
+            # print("======================")
+            # print(node.type)
+            # print(node.text.decode())
+            if node.type == self.FOR_STATEMENT:
+                return self.parse_for_statement(node)
+        word_list = ["// "]
+        word_list.extend(self.statement_node_to_word_list(node))
+        new_sr_statement = SRStatement(
+            id=self.get_uuid(),
+            type=node.type,
+            word_list=word_list
+        )
+        return new_sr_statement
+
     def parse_block(self, root_node):
         statement_list = []
         for node in root_node.children:
@@ -311,14 +422,22 @@ class ASTParse:
             # print(node.type)
             # print(node.text.decode())
             if node.type != self.BLOCK_START and node.type != self.BLOCK_END:
-                if node.type == self.FOR_STATEMENT or node.type == self.ENHANCED_FOR_STATEMENT:
+                if node.type == self.FOR_STATEMENT:
                     statement_list.append(self.parse_for_statement(node))
+                elif node.type == self.ENHANCED_FOR_STATEMENT:
+                    statement_list.append(self.parse_enhanced_for_statement(node))
                 elif node.type == self.IF_STATEMENT:
                     statement_list.append(self.parse_if_statement(node))
                 elif node.type == self.WHILE_STATEMENT:
                     statement_list.append(self.parse_while_statement(node))
                 elif node.type == self.TRY_STATEMENT:
                     statement_list.append(self.parse_try_statement(node))
+                elif node.type == self.SWITCH_EXPRESSION:
+                    statement_list.append(self.parse_switch_statement(node))
+                elif node.type == self.SWITCH_LABEL:
+                    continue
+                elif node.type == self.LABELED_STATEMENT:
+                    statement_list.append(self.parse_labeled_statement(node))
                 else:
                     # word_list = list(map(lambda n: n.text.decode(), node.children))
                     if node.type != self.LINE_COMMENT:
@@ -328,6 +447,8 @@ class ASTParse:
                             type=node.type,
                             word_list=word_list
                         )
+                        new_sr_statement.start_line = (root_node.start_point[0] + 1)
+                        new_sr_statement.end_line = (root_node.end_point[0] + 1)
                         statement_list.append(new_sr_statement)
         return statement_list
 
@@ -346,14 +467,16 @@ class ASTParse:
         new_sr_method = SRMethod(
             id=self.get_uuid()
         )
+        new_sr_method.start_line = (root_node.start_point[0] + 1)
+        new_sr_method.end_line = (root_node.end_point[0] + 1)
         word_list = []
+        word_list.extend(self.statement_node_to_word_list(root_node))
         for node in root_node.children:
             # print("++++++++++++++++++++++++++++++++++++")
             # print(node.type)
             # print(node.text.decode())
-            word_list.append(node.text.decode())
             if node.type == self.MODIFIERS:
-                new_sr_method.modifiers = node.text.decode()
+                new_sr_method.modifiers = self.statement_node_to_word_list(node)
             elif node.type.startswith("type_") or node.type.endswith("type"):
                 new_sr_method.return_type = node.text.decode()
             elif node.type == self.IDENTIFIER:
@@ -372,6 +495,8 @@ class ASTParse:
         new_sr_constructor = SRConstructor(
             id=self.get_uuid()
         )
+        new_sr_constructor.start_line = (root_node.start_point[0] + 1)
+        new_sr_constructor.end_line = (root_node.end_point[0] + 1)
         word_list = []
         for node in root_node.children:
             word_list.append(node.text.decode())
@@ -409,6 +534,8 @@ class ASTParse:
 
     def parse_class_node(self, root_node):
         new_sr_class = SRClass(id=self.get_uuid())
+        new_sr_class.start_line = (root_node.start_point[0] + 1)
+        new_sr_class.end_line = (root_node.end_point[0] + 1)
         for node in root_node.children:
             # print("======================")
             # print(node.type)
@@ -452,8 +579,10 @@ class ASTParse:
             program_id=self.get_uuid(),
             class_list=class_list,
             import_list=import_list,
-            package_name=package_name
+            package_name=package_name,
         )
+        new_sr_program.start_line = (root_node.start_point[0] + 1)
+        new_sr_program.end_line = (root_node.end_point[0] + 1)
         return new_sr_program
 
     def do_parse(self):
@@ -495,6 +624,8 @@ class ASTParse:
         new_sr_project.program_list = program_list
         return new_sr_project
 
-class FakeNode:
+class FakeNode():
+    start_point = (0,0)
+    end_point = (0,0)
     def __init__(self, children):
         self.children = children

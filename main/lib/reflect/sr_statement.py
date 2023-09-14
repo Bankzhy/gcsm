@@ -2,7 +2,7 @@ import copy
 import uuid
 
 from lib.reflect.sr_core import SRCore
-
+import re
 
 class SRStatement(SRCore):
     def __init__(self, id, word_list=[], type=None, ):
@@ -24,11 +24,63 @@ class SRStatement(SRCore):
                 break
         return loc_var_list
 
+    def get_all_word(self):
+        all_word = self.key_word_filter(self.to_node_word_list())
+        return all_word
+
+    def key_word_filter(self, word_list):
+        kwl = []
+        java_keywords = ["boolean", "int", "long", "short", "byte", "float", "double", "char", "class", "interface",
+                         "if", "else", "do", "while", "for", "switch", "case", "default", "break", "continue", "return",
+                         "try", "catch", "finally", "public", "protected", "private", "final", "void", "static",
+                         "strict", "abstract", "transient", "synchronized", "volatile", "native", "package", "import",
+                         "throw", "throws", "extends", "implements", "this", "supper", "instanceof", "new", "true",
+                         "false", "null", "goto", "const", "=", "*=", "/=", "%=", "+=", "-=", "<<=", ">>=", "&=", "!=",
+                         "^=", ">>>=", "++", "--", "=="]
+        special_key = "[\n`~!@#$%^&*()+=\\-_|{}':;',\\[\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。， 、？]"
+        for i, w in enumerate(word_list):
+            if w not in java_keywords and w not in special_key and not str(w).isdigit():
+                print("w")
+                print(w)
+                wl = re.findall('[A-Z][^A-Z]*', w)
+                kwl.extend(wl)
+        return kwl
+
     def replace_param(self, new_param, old_param):
 
         for i in range(0, len(self.word_list)):
             if self.word_list[i] == old_param:
                 self.word_list[i] = new_param
+
+    def replace_method_with_var(self, method_name, var_name):
+        start_index = 0
+        end_index = 0
+        m_num = 0
+
+        for index, w in enumerate(self.word_list):
+            if w == method_name:
+                start_index = index + 1
+            if w == ")":
+                if index > start_index and m_num < 1:
+                    end_index = index
+                    break
+                else:
+                    m_num -= 1
+
+            if w == "(" and index > start_index and start_index != 0:
+                m_num += 1
+
+        new_word_list = []
+
+        for index, w in enumerate(self.word_list):
+            if index == start_index - 1:
+                new_word_list.append(var_name)
+            elif index >= start_index and index <= end_index:
+                continue
+            else:
+                new_word_list.append(w)
+        self.condition = new_word_list
+
 
     def replace_return(self, l_s):
         # print(self.word_list)
@@ -94,6 +146,35 @@ class SRIFStatement(SRStatement):
         for i in range(0, len(self.condition)):
             if self.condition[i] == old_param:
                 self.condition[i] = new_param
+
+    def replace_method_with_var(self, method_name, var_name):
+        start_index = 0
+        end_index = 0
+        m_num = 0
+
+        for index, w in enumerate(self.condition):
+            if w == method_name:
+                start_index = index + 1
+            if w == ")":
+                if index > start_index and m_num < 1:
+                    end_index = index
+                    break
+                else:
+                    m_num -= 1
+
+            if w == "(" and index > start_index and start_index != 0:
+                m_num += 1
+
+        new_word_list = []
+
+        for index, w in enumerate(self.condition):
+            if index == start_index - 1:
+                new_word_list.append(var_name)
+            elif index >= start_index and index <= end_index:
+                continue
+            else:
+                new_word_list.append(w)
+        self.condition = new_word_list
 
     def to_string(self, space=1):
         result = ""
@@ -172,6 +253,35 @@ class SRFORStatement(SRStatement):
             if self.update[i] == old_param:
                 self.update[i] = new_param
 
+    def replace_method_with_var(self, method_name, var_name):
+        start_index = 0
+        end_index = 0
+        m_num = 0
+
+        for index, w in enumerate(self.end_condition):
+            if w == method_name:
+                start_index = index + 1
+            if w == ")":
+                if index > start_index and m_num < 1:
+                    end_index = index
+                    break
+                else:
+                    m_num -= 1
+
+            if w == "(" and index > start_index and start_index != 0:
+                m_num += 1
+
+        new_word_list = []
+
+        for index, w in enumerate(self.end_condition):
+            if index == start_index - 1:
+                new_word_list.append(var_name)
+            elif index >= start_index and index <= end_index:
+                continue
+            else:
+                new_word_list.append(w)
+        self.condition = new_word_list
+
     def to_string(self, space=1):
         result = ""
         result += "for"
@@ -179,8 +289,9 @@ class SRFORStatement(SRStatement):
         result += " ".join(self.init)
         # result += ";"
         result += " ".join(self.end_condition)
-        result += ";"
-        result += " ".join(self.update)
+        if len(self.update) > 0:
+            result += ";"
+            result += " ".join(self.update)
         result += " ) "
         result += "{"
         result += "\n"
@@ -202,10 +313,11 @@ class SRFORStatement(SRStatement):
         result += "for"
         result += " ("
         result += " ".join(self.init)
-        # result += ";"
-        result += " ".join(self.end_condition)
         result += ";"
-        result += " ".join(self.update)
+        result += " ".join(self.end_condition)
+        if len(self.update) > 0:
+            result += ";"
+            result += " ".join(self.update)
         result += " ) "
         return result
 
@@ -214,9 +326,11 @@ class SRFORStatement(SRStatement):
         word_list.append("for")
         word_list.append("(")
         word_list.extend(self.init)
-        word_list.extend(self.end_condition)
         word_list.append(";")
-        word_list.extend(self.update)
+        word_list.extend(self.end_condition)
+        if len(self.update) > 0:
+            word_list.append(";")
+            word_list.extend(self.update)
         word_list.append(")")
         return word_list
 
@@ -239,6 +353,35 @@ class SRWhileStatement(SRStatement):
         for i in range(0, len(self.end_condition)):
             if self.end_condition[i] == old_param:
                 self.end_condition[i] = new_param
+
+    def replace_method_with_var(self, method_name, var_name):
+        start_index = 0
+        end_index = 0
+        m_num = 0
+
+        for index, w in enumerate(self.end_condition):
+            if w == method_name:
+                start_index = index + 1
+            if w == ")":
+                if index > start_index and m_num < 1:
+                    end_index = index
+                    break
+                else:
+                    m_num -= 1
+
+            if w == "(" and index > start_index and start_index != 0:
+                m_num += 1
+
+        new_word_list = []
+
+        for index, w in enumerate(self.end_condition):
+            if index == start_index - 1:
+                new_word_list.append(var_name)
+            elif index >= start_index and index <= end_index:
+                continue
+            else:
+                new_word_list.append(w)
+        self.condition = new_word_list
 
     def to_string(self, space=1):
         result = ""
@@ -277,6 +420,116 @@ class SRWhileStatement(SRStatement):
         word_list.append(")")
         return word_list
 
+
+class SRSwitchStatement(SRStatement):
+    def __init__(self, id, word_list=[], child_statement_list=[], condition=[], switch_case_list=[]):
+        self.word_list = word_list
+        self.condition = condition
+        self.id = id
+        self.sid = 0
+        self.block_depth = -1
+        self.switch_case_list = switch_case_list
+
+    def replace_method_with_var(self, method_name, var_name):
+        start_index = 0
+        end_index = 0
+        m_num = 0
+
+        for index, w in enumerate(self.condition):
+            if w == method_name:
+                start_index = index + 1
+            if w == ")":
+                if index > start_index and m_num < 1:
+                    end_index = index
+                    break
+                else:
+                    m_num -= 1
+
+            if w == "(" and index > start_index and start_index != 0:
+                m_num += 1
+
+        new_word_list = []
+
+        for index, w in enumerate(self.condition):
+            if index == start_index - 1:
+                new_word_list.append(var_name)
+            elif index >= start_index and index <= end_index:
+                continue
+            else:
+                new_word_list.append(w)
+        self.condition = new_word_list
+
+    def to_string(self, space=1):
+        result = ""
+        result += "switch"
+        result += " ("
+        result += " ".join(self.condition)
+        result += " )"
+        result += " {"
+        result += "\n"
+        space += 1
+
+        for cb in self.switch_case_list:
+            for x in range(0, space):
+                result += "    "
+            result += cb.to_string(space=space)
+
+        for x in range(0, space - 1):
+            result += "    "
+        result += "} "
+        return result
+
+    def to_node_string(self):
+        result = ""
+        result += "switch"
+        result += " ("
+        result += " ".join(self.condition)
+        result += " )"
+        return result
+
+    def to_node_word_list(self):
+        word_list = []
+        word_list.append("switch")
+        word_list.append("(")
+        word_list.extend(self.condition)
+        word_list.append(")")
+        return word_list
+
+class SRSwitchCase(SRStatement):
+    def __init__(self, id, word_list=[], condition=[], statement_list=[]):
+        self.word_list = word_list
+        self.condition = condition
+        self.id = id
+        self.sid = 0
+        self.block_depth = -1
+        self.statement_list = statement_list
+
+    def to_string(self, space=1):
+        result = ""
+        result += "".join(self.condition)
+        result += " :"
+
+        space += 1
+        for st in self.statement_list:
+            for x in range(0, space):
+                result += "    "
+            result += st.to_string(space=space)
+            result += "\n"
+        return result
+
+    def to_node_string(self):
+        result = ""
+        result += " ".join(self.condition)
+        result += ":"
+        return result
+
+    def to_node_word_list(self):
+        word_list = []
+        word_list.append("switch")
+        word_list.append("(")
+        word_list.extend(self.condition)
+        word_list.append(")")
+        return word_list
 
 class SRTRYStatement(SRStatement):
 

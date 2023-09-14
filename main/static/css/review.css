@@ -79,7 +79,7 @@
 .left {
     height: 100%;
     width: 50%;
-    overflow: scroll;
+    /*overflow: scroll;*/
     /*background-color: #0aaeb3;*/
 }
 .right {
@@ -100,8 +100,11 @@
 }
 
 .code-area {
-    height: 100%;
-    padding: 10px;
+    height: 90%;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 10px;
+    padding-bottom: 60px;
     overflow: scroll;
 }
 
@@ -159,4 +162,12 @@
 }
 .el-table .cell {
       white-space: pre-wrap;
+}
+
+.el-table .warning-row {
+background: oldlace;
+}
+
+.el-table .success-row {
+background: #f0f9eb;
 }

@@ -2,7 +2,8 @@ import copy
 import json
 
 from lib.reflect.sr_core import SRCore
-from lib.reflect.sr_statement import SRIFStatement, SRFORStatement, SRWhileStatement, SRTRYStatement, SRStatement
+from lib.reflect.sr_statement import SRIFStatement, SRFORStatement, SRWhileStatement, SRTRYStatement, SRStatement, \
+    SRSwitchStatement
 
 
 class SRMethod(SRCore):
@@ -36,7 +37,7 @@ class SRMethod(SRCore):
 
     def to_string(self, space=1):
         result = ""
-        result += self.modifiers
+        result += " ".join(self.modifiers)
         result += " "
         result += self.return_type
         result += " "
@@ -150,6 +151,29 @@ class SRMethod(SRCore):
             result_list.extend(back_st_list)
         return result_list
 
+    def __insert_st_list(self, statement_id, statement_list, new_statement_list):
+        result_list = []
+        for statement in statement_list:
+            if type(statement) == SRIFStatement:
+                statement.pos_statement_list = self.__find_replace_st_list(statement_id=statement_id, statement_list=statement.pos_statement_list, new_statement_list=new_statement_list)
+                statement.neg_statement_list= self.__find_replace_st_list(statement_id=statement_id, statement_list=statement.neg_statement_list, new_statement_list=new_statement_list)
+            elif type(statement) == SRFORStatement:
+                statement.child_statement_list = self.__find_replace_st_list(statement_id=statement_id, statement_list=statement.child_statement_list, new_statement_list=new_statement_list)
+            elif type(statement) == SRWhileStatement:
+                statement.child_statement_list = self.__find_replace_st_list(statement_id=statement_id, statement_list=statement.child_statement_list, new_statement_list=new_statement_list)
+            elif type(statement) == SRTRYStatement:
+                statement.try_statement_list = self.__find_replace_st_list(statement_id=statement_id, statement_list=statement.try_statement_list, new_statement_list=new_statement_list)
+                for cb in statement.catch_block_list:
+                    cb.child_statement_list = self.__find_replace_st_list(statement_id=statement_id, statement_list=cb.child_statement_list, new_statement_list=new_statement_list)
+                statement.final_block_statement_list = self.__find_replace_st_list(statement_id=statement_id, statement_list=statement.final_block_statement_list, new_statement_list=new_statement_list)
+            # else:
+            if statement.id == statement_id:
+                result_list.extend(new_statement_list)
+                result_list.append(statement)
+            else:
+                result_list.append(statement)
+        return result_list
+
     def __find_replace_st_list(self, statement_id, statement_list, new_statement_list):
         front_st_list = []
         back_st_list = []
@@ -209,6 +233,12 @@ class SRMethod(SRCore):
             statement_list=self.statement_list,
             new_statement_list=new_statement_list
         )
+    def insert_statement_list(self, statement_id, new_statement_list):
+        self.statement_list = self.__insert_st_list(
+            statement_id=statement_id,
+            statement_list=self.statement_list,
+            new_statement_list=new_statement_list
+        )
 
     def __find_replace_param(self, new_param, old_param, statement_list):
         result_list = []
@@ -225,6 +255,13 @@ class SRMethod(SRCore):
                     old_param=old_param,
                     statement_list=statement.neg_statement_list
                 )
+            elif type(statement) == SRSwitchStatement:
+                for switch_case in statement.switch_case_list:
+                    switch_case.statement_list = self.__find_replace_param(
+                        new_param=new_param,
+                        old_param=old_param,
+                        statement_list=switch_case.statement_list
+                    )
             elif type(statement) == SRFORStatement:
                 statement.child_statement_list = self.__find_replace_param(
                     new_param=new_param,
@@ -308,6 +345,68 @@ class SRMethod(SRCore):
                 statement_list=st_list
             )
             st_list = result
+        return result
+
+    def __replace_method_with_var(self, method_name, var_name, statement_list):
+        result_list = []
+        old_st_list = copy.deepcopy(statement_list)
+        for statement in old_st_list:
+            if type(statement) == SRIFStatement:
+                statement.pos_statement_list = self.__replace_method_with_var(
+                    method_name=method_name,
+                    var_name=var_name,
+                    statement_list=statement.pos_statement_list
+                )
+                statement.neg_statement_list = self.__replace_method_with_var(
+                    method_name=method_name,
+                    var_name=var_name,
+                    statement_list=statement.neg_statement_list
+                )
+            elif type(statement) == SRFORStatement:
+                statement.child_statement_list = self.__replace_method_with_var(
+                    method_name=method_name,
+                    var_name=var_name,
+                    statement_list=statement.child_statement_list
+                )
+            elif type(statement) == SRWhileStatement:
+                statement.child_statement_list = self.__replace_method_with_var(
+                    method_name=method_name,
+                    var_name=var_name,
+                    statement_list=statement.child_statement_list
+                )
+            elif type(statement) == SRTRYStatement:
+                statement.try_statement_list = self.__replace_method_with_var(
+                    method_name=method_name,
+                    var_name=var_name,
+                    statement_list=statement.try_statement_list
+                )
+                for cb in statement.catch_block_list:
+                    cb.child_statement_list = self.__replace_method_with_var(
+                        method_name=method_name,
+                        var_name=var_name,
+                        statement_list=cb.child_statement_list
+                    )
+                statement.final_block_statement_list = self.__replace_method_with_var(
+                    method_name=method_name,
+                    var_name=var_name,
+                    statement_list=statement.final_block_statement_list
+                )
+            else:
+                statement.replace_method_with_var(
+                    method_name=method_name,
+                    var_name=var_name)
+            statement.replace_method_with_var(
+                method_name=method_name,
+                var_name=var_name)
+            result_list.append(statement)
+        return result_list
+
+    def replace_method_with_var(self, method_name, var_name):
+        result = []
+        if len(self.statement_list) > 0:
+            result = self.__replace_method_with_var(method_name=method_name,
+                                                    var_name=var_name, statement_list=self.statement_list)
+
         return result
 
     def __find_replace_return(self, statement_list, l_s):
@@ -442,6 +541,51 @@ class SRMethod(SRCore):
                 }
                 block_data.append(e_td)
 
+            elif type(statement) == SRSwitchStatement:
+                s_str = ""
+                for x in range(0, space):
+                    s_str += "    "
+                s_str += statement.to_node_string()
+                s_str += "{"
+                s_td = {
+                    "str": s_str,
+                    "sid": statement.sid
+                }
+                block_data.append(s_td)
+
+                for cb in statement.switch_case_list:
+                    cb_str = ""
+                    for x in range(0, space):
+                        cb_str += "    "
+                    cb_str += cb.to_node_string()
+                    cb_td = {
+                        "str": cb_str,
+                        "sid": statement.sid
+                    }
+                    block_data.append(cb_td)
+
+                    if len(cb.statement_list) > 0:
+                        child_block_data = self.to_block_string(statement_list=cb.statement_list,
+                                                                space=space)
+                        block_data.extend(child_block_data)
+                    cb_str = ""
+                    cbe_td = {
+                        "str": cb_str,
+                        "sid": statement.sid
+                    }
+                    block_data.append(cbe_td)
+
+
+                e_str = ""
+                for x in range(0, space):
+                    e_str += "    "
+                e_str += "}"
+
+                e_td = {
+                    "str": e_str,
+                    "sid": ""
+                }
+                block_data.append(e_td)
 
             elif type(statement) == SRFORStatement:
                 s_str = ""
